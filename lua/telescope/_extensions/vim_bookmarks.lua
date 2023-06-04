@@ -19,7 +19,7 @@ local function get_bookmarks(files, opts)
                         local bookmark = vim.fn['bm#get_bookmark_by_line'](file, line)
 
                         local text = bookmark.annotation ~= "" and "Annotation: " .. bookmark.annotation or
-                        bookmark.content
+                            bookmark.content
                         if text == "" then
                                 text = "(empty line)"
                         end
@@ -128,29 +128,74 @@ local function make_bookmark_picker(filenames, opts)
                                         actions.close(prompt_bufnr)
                                 end
                         end
-
-                        bookmark_actions.delete_selected:enhance { post = refresh_picker }
-                        bookmark_actions.delete_at_cursor:enhance { post = refresh_picker }
-                        bookmark_actions.delete_all:enhance { post = refresh_picker }
-                        bookmark_actions.delete_selected_or_at_cursor:enhance { post = refresh_picker }
+                        local refresh_file = function()
+                                vim.cmd('silent BookmarkSave '.. vim.g.bookmark_auto_save_file)
+                        end
+                        local post = function()
+                                refresh_file()
+                                refresh_picker()
+                        end
+                        bookmark_actions.delete_selected:enhance { post = post }
+                        bookmark_actions.delete_at_cursor:enhance { post = post }
+                        bookmark_actions.delete_all:enhance { post = post }
+                        bookmark_actions.delete_selected_or_at_cursor:enhance { post = post }
+                        for _, mode in pairs({ "i", "n" }) do
+                                for key, action in pairs(opts.mappings[mode] or {}) do
+                                        map(mode, key, action)
+                                end
+                        end
 
                         return true
                 end
-        }):find()
+        })
+            :find()
 end
 
-local all = function(opts)
-        make_bookmark_picker(vim.fn['bm#all_files'](), opts)
+-- default config
+local all_config = {
+        hide_filename = true,
+        tail_path = require('telescope.config').tail_path and true,
+        shorten_path = true,
+        prompt_title = 'vim-bookmarks',
+        width_line = 5,
+        width_text = 60,
+        only_annotated = false,
+        mappings = {}
+}
+local current_config = {
+        hide_filename = false,
+        tail_path = require('telescope.config').tail_path and true,
+        shorten_path = true,
+        prompt_title = 'vim-bookmarks',
+        width_line = 5,
+        width_text = 60,
+        only_annotated = false,
+        mappings = {}
+}
+
+local all = function()
+        make_bookmark_picker(vim.fn['bm#all_files'](), all_config)
 end
 
-local current_file = function(opts)
-        opts = opts or {}
-        opts = vim.tbl_extend('keep', opts, { path_display = true })
+local current_file = function()
+        local opts = vim.tbl_extend('keep', current_config, { path_display = true })
 
         make_bookmark_picker({ vim.fn.expand('%:p') }, opts)
 end
 
 return require('telescope').register_extension {
+        setup = function(extension_config, telescope_config)
+                if extension_config.all ~= nil then
+                        all_config = vim.tbl_extend("force", all_config, extension_config.all)
+                end
+                if extension_config.current ~= nil then
+                        current_config = vim.tbl_extend("force", current_config, extension_config.all)
+                end
+                extension_config.all = nil
+                extension_config.current = nil
+                all_config = vim.tbl_extend("force", all_config, extension_config)
+                current_config = vim.tbl_extend("force", current_config, extension_config)
+        end,
         exports = {
                 -- Default when to argument is given, i.e. :Telescope vim_bookmarks
                 vim_bookmarks = all,
