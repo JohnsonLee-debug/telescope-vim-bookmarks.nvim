@@ -128,11 +128,17 @@ local function make_bookmark_picker(filenames, opts)
                                         actions.close(prompt_bufnr)
                                 end
                         end
-                        local refresh_file = function()
-                                vim.cmd('silent BookmarkSave '.. vim.g.bookmark_auto_save_file)
+                        local function bookmark_save_file(file)
+                                if vim.g.bookmark_manage_per_buffer == 1 then
+                                        return vim.fn['g:BMBufferFileLocation'](file) or
+                                            vim.loop.cwd() .. '/.vim-bookmarks'
+                                elseif vim.g.bookmark_save_per_working_dir == 1 then
+                                        return vim.fn['g:BMWorkDirFileLocation']() or vim.loop.cwd() .. '/.vim-bookmarks'
+                                end
+                                return vim.g.bookmark_auto_save_file
                         end
                         local post = function()
-                                refresh_file()
+                                vim.fn['BookmarkSave'](bookmark_save_file(vim.g.bm_current_file), 1)
                                 refresh_picker()
                         end
                         bookmark_actions.delete_selected:enhance { post = post }

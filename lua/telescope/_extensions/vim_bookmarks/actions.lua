@@ -2,9 +2,10 @@ local transform_mod = require('telescope.actions.mt').transform_mod
 
 local actions = require('telescope.actions')
 local action_state = require('telescope.actions.state')
+-- come from https://github.com/reaz1995/telescope-vim-bookmarks.nvim/blob/774b1d951f5450825d6fa86ed89f9dc33b1a4bdb/lua/telescope/_extensions/vim_bookmarks/actions.lua#LL6C40-L6C40
+
 
 function delete_bookmark(entry)
-
         vim.fn['bm_sign#del'](entry.filename, tonumber(entry.value.sign_idx))
         vim.fn['bm#del_bookmark_at_line'](entry.filename, tonumber(entry.lnum))
 end
